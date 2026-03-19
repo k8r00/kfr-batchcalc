@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fuel Mixture Cost Calculator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f4f0;
+      --surface: #ffffff;
+      --surface-2: #f1f0ec;
+      --border: rgba(0,0,0,0.12);
+      --border-strong: rgba(0,0,0,0.22);
+      --text: #1a1a18;
+      --text-2: #5f5e5a;
+      --text-3: #8a8880;
+      --accent: #0f6e56;
+      --accent-bg: #e1f5ee;
+      --danger: #a32d2d;
+      --danger-bg: #fcebeb;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1c1a;
+        --surface: #252523;
+        --surface-2: #2e2e2b;
+        --border: rgba(255,255,255,0.1);
+        --border-strong: rgba(255,255,255,0.2);
+        --text: #f0ede6;
+        --text-2: #b4b2a9;
+        --text-3: #888780;
+        --accent: #5dcaa5;
+        --accent-bg: #085041;
+        --danger: #f09595;
+        --danger-bg: #501313;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .page {
+      max-width: 740px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    header p {
+      font-size: 14px;
+      color: var(--text-2);
+    }
+
+    .card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 1rem;
+    }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+
+    @media (max-width: 520px) {
+      .row, .row-3 { grid-template-columns: 1fr; }
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-2);
+      margin-bottom: 5px;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      height: 38px;
+      padding: 0 10px;
+      font-size: 14px;
+      border: 0.5px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      background: var(--surface-2);
+      color: var(--text);
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(15,110,86,0.12);
+    }
+
+    .select-wrap { position: relative; }
+    .select-wrap::after {
+      content: '';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0; height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 5px solid var(--text-2);
+      pointer-events: none;
+    }
+
+    .warn {
+      font-size: 12px;
+      color: var(--danger);
+      background: var(--danger-bg);
+      padding: 6px 10px;
+      border-radius: var(--radius-md);
+      margin-top: 8px;
+      display: none;
+    }
+
+    .global-warn {
+      font-size: 13px;
+      color: var(--danger);
+      background: var(--danger-bg);
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      margin-bottom: 10px;
+      display: none;
+    }
+
+    .calc-btn {
+      width: 100%;
+      height: 44px;
+      font-size: 15px;
+      font-weight: 500;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-md);
+      color: #fff;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      letter-spacing: 0.01em;
+    }
+
+    .calc-btn:hover { opacity: 0.88; }
+    .calc-btn:active { opacity: 0.75; transform: scale(0.99); }
+
+    .result-section {
+      display: none;
+      margin-top: 1.25rem;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 1rem;
+    }
+
+    .metric {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+    }
+
+    .metric .mlabel {
+      font-size: 12px;
+      color: var(--text-2);
+      margin-bottom: 6px;
+    }
+
+    .metric .mval {
+      font-size: 24px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .narrative {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--text);
+    }
+
+    .narrative b { font-weight: 500; }
+
+    .divider {
+      height: 0.5px;
+      background: var(--border);
+      margin: 10px 0;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-3);
+      margin-top: 2.5rem;
+      padding-top: 1rem;
+      border-top: 0.5px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <h1>Fuel mixture cost calculator</h1>
+    <p>Calculate the blended cost per liter of an Unleaded + K1 additive batch</p>
+  </header>
+
+  <!-- Batch Details -->
+  <div class="card">
+    <div class="card-title">Batch details</div>
+    <div class="row">
+      <div class="field">
+        <label>Fuel type</label>
+        <div class="select-wrap">
+          <select id="fuelType">
+            <option value="Regular">Regular Unleaded</option>
+            <option value="Premium">Premium Unleaded</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Total mixture volume (L)</label>
+        <input type="number" id="totalVol" placeholder="e.g. 10000" value="10000" min="1" step="1">
+      </div>
+    </div>
+  </div>
+
+  <!-- Unleaded -->
+  <div class="card">
+    <div class="card-title">Pure unleaded fuel breakdown</div>
+    <div class="row-3">
+      <div class="field">
+        <label>% Unleaded in batch</label>
+        <input type="number" id="ulPct" placeholder="e.g. 90" value="90" min="0" max="100" step="0.0001">
+      </div>
+      <div class="field">
+        <label>% of Unleaded — old stock</label>
+        <input type="number" id="ulOldPct" placeholder="e.g. 20" value="0" min="0" max="100" step="0.0001">
+      </div>
+      <div class="field">
+        <label>% of Unleaded — new stock</label>
+        <input type="number" id="ulNewPct" placeholder="e.g. 80" value="100" min="0" max="100" step="0.0001">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Old Unleaded price (Php/L)</label>
+        <input type="number" id="ulOldPrice" placeholder="e.g. 58.50" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label>New Unleaded price (Php/L)</label>
+        <input type="number" id="ulNewPrice" placeholder="e.g. 60.00" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="warn" id="ulWarn">Old % + New % of Unleaded must equal 100%</div>
+  </div>
+
+  <!-- K1 -->
+  <div class="card">
+    <div class="card-title">K1 additive breakdown</div>
+    <div class="row-3">
+      <div class="field">
+        <label>% K1 in batch</label>
+        <input type="number" id="k1Pct" placeholder="e.g. 10" value="10" min="0" max="100" step="0.0001">
+      </div>
+      <div class="field">
+        <label>% of K1 — old stock</label>
+        <input type="number" id="k1OldPct" placeholder="e.g. 30" value="0" min="0" max="100" step="0.0001">
+      </div>
+      <div class="field">
+        <label>% of K1 — new stock</label>
+        <input type="number" id="k1NewPct" placeholder="e.g. 70" value="100" min="0" max="100" step="0.0001">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Old K1 price (Php/L)</label>
+        <input type="number" id="k1OldPrice" placeholder="e.g. 120.00" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label>New K1 price (Php/L)</label>
+        <input type="number" id="k1NewPrice" placeholder="e.g. 130.00" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="warn" id="k1Warn">Old % + New % of K1 must equal 100%</div>
+  </div>
+
+  <div class="global-warn" id="totalWarn">Unleaded % + K1 % must equal 100%</div>
+
+  <button class="calc-btn" onclick="calculate()">Calculate batch cost</button>
+
+  <!-- Results -->
+  <div class="result-section" id="results">
+    <div class="metrics">
+      <div class="metric">
+        <div class="mlabel">Total batch cost</div>
+        <div class="mval" id="rTotalCost">—</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Cost per liter</div>
+        <div class="mval" id="rPerLiter">—</div>
+      </div>
+    </div>
+    <div class="narrative" id="rNarrative"></div>
+  </div>
+
+  <footer>Fuel Mixture Cost Calculator &mdash; works offline, no data is sent anywhere.</footer>
+
+</div>
+
+<script>
+  function fmt(n, d) { return Number(n).toLocaleString('en-PH', { minimumFractionDigits: d ?? 2, maximumFractionDigits: d ?? 2 }); }
+  function fmtV(n) { return Number(n).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+  function fmtP(n) { return Number(n).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 4 }); }
+  function g(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+  function validate() {
+    const ulOld = g('ulOldPct'), ulNew = g('ulNewPct');
+    const k1Old = g('k1OldPct'), k1New = g('k1NewPct');
+    const ulPct = g('ulPct'), k1Pct = g('k1Pct');
+    const ulOk = Math.abs(ulOld + ulNew - 100) < 0.01;
+    const k1Ok = Math.abs(k1Old + k1New - 100) < 0.01;
+    const totalOk = Math.abs(ulPct + k1Pct - 100) < 0.01;
+    document.getElementById('ulWarn').style.display = ulOk ? 'none' : 'block';
+    document.getElementById('k1Warn').style.display = k1Ok ? 'none' : 'block';
+    document.getElementById('totalWarn').style.display = totalOk ? 'none' : 'block';
+    return ulOk && k1Ok && totalOk;
+  }
+
+  function autoSync(changed) {
+    const pairs = {
+      ulOldPct: 'ulNewPct', ulNewPct: 'ulOldPct',
+      k1OldPct: 'k1NewPct', k1NewPct: 'k1OldPct',
+      ulPct: 'k1Pct', k1Pct: 'ulPct'
+    };
+    const partner = pairs[changed];
+    if (partner) {
+      const v = Math.max(0, Math.min(100, 100 - g(changed)));
+      document.getElementById(partner).value = parseFloat(v.toFixed(4));
+    }
+  }
+
+  ['ulPct','k1Pct','ulOldPct','ulNewPct','k1OldPct','k1NewPct'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      autoSync(id);
+      validate();
+    });
+  });
+
+  function calculate() {
+    if (!validate()) return;
+
+    const fuelType = document.getElementById('fuelType').value;
+    const totalVol = g('totalVol');
+    const ulPct = g('ulPct'), k1Pct = g('k1Pct');
+    const ulOldPct = g('ulOldPct'), ulNewPct = g('ulNewPct');
+    const k1OldPct = g('k1OldPct'), k1NewPct = g('k1NewPct');
+    const ulOldPrice = g('ulOldPrice'), ulNewPrice = g('ulNewPrice');
+    const k1OldPrice = g('k1OldPrice'), k1NewPrice = g('k1NewPrice');
+
+    const ulVol = totalVol * (ulPct / 100);
+    const k1Vol = totalVol * (k1Pct / 100);
+    const ulOldVol = ulVol * (ulOldPct / 100);
+    const ulNewVol = ulVol * (ulNewPct / 100);
+    const k1OldVol = k1Vol * (k1OldPct / 100);
+    const k1NewVol = k1Vol * (k1NewPct / 100);
+    const ulOldCost = ulOldVol * ulOldPrice;
+    const ulNewCost = ulNewVol * ulNewPrice;
+    const k1OldCost = k1OldVol * k1OldPrice;
+    const k1NewCost = k1NewVol * k1NewPrice;
+    const totalCost = ulOldCost + ulNewCost + k1OldCost + k1NewCost;
+    const perLiter = totalCost / totalVol;
+    const totalKL = totalVol / 1000;
+
+    document.getElementById('rTotalCost').textContent = 'Php ' + fmt(totalCost);
+    document.getElementById('rPerLiter').textContent = 'Php ' + fmt(perLiter) + '/L';
+
+    let ulPart = '';
+    if (ulOldPct > 0) {
+      ulPart += `Of the Pure ${fuelType} Unleaded — <b>${fmtP(ulOldPct)}%</b>, or <b>${fmtV(ulOldVol)} L</b>, is old stock @ <b>Php ${fmt(ulOldPrice)}/L</b>, costing <b>Php ${fmt(ulOldCost)}</b>. `;
+    }
+    if (ulNewPct > 0) {
+      ulPart += `<b>${fmtP(ulNewPct)}%</b>, or <b>${fmtV(ulNewVol)} L</b>, is new stock @ <b>Php ${fmt(ulNewPrice)}/L</b>, costing <b>Php ${fmt(ulNewCost)}</b>.`;
+    }
+
+    let k1Part = '';
+    if (k1OldPct > 0) {
+      k1Part += `Of the K1 Additive — <b>${fmtP(k1OldPct)}%</b>, or <b>${fmtV(k1OldVol)} L</b>, is old stock @ <b>Php ${fmt(k1OldPrice)}/L</b>, costing <b>Php ${fmt(k1OldCost)}</b>. `;
+    }
+    if (k1NewPct > 0) {
+      k1Part += `<b>${fmtP(k1NewPct)}%</b>, or <b>${fmtV(k1NewVol)} L</b>, is new stock @ <b>Php ${fmt(k1NewPrice)}/L</b>, costing <b>Php ${fmt(k1NewCost)}</b>.`;
+    }
+
+    document.getElementById('rNarrative').innerHTML =
+      `This batch of <b>${fuelType} Unleaded</b> is <b>${fmtV(totalKL)} kL (${fmtV(totalVol)} L)</b>. ` +
+      `<b>${fmtP(ulPct)}%</b> is Pure ${fuelType} Unleaded, and <b>${fmtP(k1Pct)}%</b> is K1 Additive.<br><br>` +
+      ulPart + `<br><br>` +
+      k1Part + `<br><br>` +
+      `The final cost of this batch is <b>Php ${fmt(totalCost)}</b>, or <b>Php ${fmt(perLiter)}/L</b>.`;
+
+    document.getElementById('results').style.display = 'block';
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+</script>
+</body>
+</html>
