@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fuel Mixture Cost Calculator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f4f0;
+      --surface: #ffffff;
+      --surface-2: #f1f0ec;
+      --border: rgba(0,0,0,0.12);
+      --border-strong: rgba(0,0,0,0.22);
+      --text: #1a1a18;
+      --text-2: #5f5e5a;
+      --text-3: #8a8880;
+      --accent: #0f6e56;
+      --danger: #a32d2d;
+      --danger-bg: #fcebeb;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1c1a;
+        --surface: #252523;
+        --surface-2: #2e2e2b;
+        --border: rgba(255,255,255,0.1);
+        --border-strong: rgba(255,255,255,0.2);
+        --text: #f0ede6;
+        --text-2: #b4b2a9;
+        --text-3: #888780;
+        --accent: #5dcaa5;
+        --danger: #f09595;
+        --danger-bg: #501313;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .page { max-width: 740px; margin: 0 auto; }
+
+    header { margin-bottom: 2rem; }
+    header h1 { font-size: 22px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+    header p { font-size: 14px; color: var(--text-2); }
+
+    .card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 1rem;
+    }
+
+    .row   { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+
+    @media (max-width: 520px) {
+      .row, .row-3 { grid-template-columns: 1fr; }
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-2);
+      margin-bottom: 5px;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      height: 38px;
+      padding: 0 10px;
+      font-size: 14px;
+      border: 0.5px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      background: var(--surface-2);
+      color: var(--text);
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(15,110,86,0.12);
+    }
+
+    .select-wrap { position: relative; }
+    .select-wrap::after {
+      content: '';
+      position: absolute;
+      right: 12px; top: 50%;
+      transform: translateY(-50%);
+      width: 0; height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 5px solid var(--text-2);
+      pointer-events: none;
+    }
+
+    .derived {
+      font-size: 11px;
+      color: var(--text-3);
+      margin-top: 4px;
+      min-height: 16px;
+    }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-2);
+      margin: 12px 0 8px;
+    }
+
+    .toggle-group {
+      display: flex;
+      border: 0.5px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      width: fit-content;
+      margin-bottom: 14px;
+    }
+
+    .toggle-group button {
+      height: 32px;
+      padding: 0 16px;
+      font-size: 12px;
+      font-weight: 500;
+      background: transparent;
+      border: none;
+      color: var(--text-2);
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .toggle-group button.active {
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    .warn {
+      font-size: 12px;
+      color: var(--danger);
+      background: var(--danger-bg);
+      padding: 6px 10px;
+      border-radius: var(--radius-md);
+      margin-top: 8px;
+      display: none;
+    }
+
+    .global-warn {
+      font-size: 13px;
+      color: var(--danger);
+      background: var(--danger-bg);
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      margin-bottom: 10px;
+      display: none;
+    }
+
+    .calc-btn {
+      width: 100%;
+      height: 44px;
+      font-size: 15px;
+      font-weight: 500;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-md);
+      color: #fff;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .calc-btn:hover { opacity: 0.88; }
+    .calc-btn:active { opacity: 0.75; transform: scale(0.99); }
+
+    .result-section { display: none; margin-top: 1.25rem; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 1rem;
+    }
+
+    .metric {
+      background: var(--surface-2);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+    }
+
+    .metric .mlabel { font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
+    .metric .mval   { font-size: 24px; font-weight: 500; color: var(--text); }
+
+    .narrative {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--text);
+    }
+
+    .narrative b { font-weight: 500; }
+
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-3);
+      margin-top: 2.5rem;
+      padding-top: 1rem;
+      border-top: 0.5px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <h1>Fuel mixture cost calculator</h1>
+    <p>Calculate the blended cost per liter of an Unleaded + K1 additive batch</p>
+  </header>
+
+  <!-- Batch Details -->
+  <div class="card">
+    <div class="card-title">Batch details</div>
+    <div class="row">
+      <div class="field">
+        <label>Fuel type</label>
+        <div class="select-wrap">
+          <select id="fuelType">
+            <option value="Regular">Regular Unleaded</option>
+            <option value="Premium">Premium Unleaded</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Total mixture volume (L)</label>
+        <input type="number" id="totalVol" value="10000" min="1" step="1" oninput="onTotalVolChange()">
+      </div>
+    </div>
+  </div>
+
+  <!-- Unleaded -->
+  <div class="card">
+    <div class="card-title">Pure unleaded fuel</div>
+    <div class="row">
+      <div class="field">
+        <label>% Unleaded in batch</label>
+        <input type="number" id="ulPct" value="90" min="0" max="100" step="0.0001" oninput="onUlPctChange()">
+        <div class="derived" id="ulVolDerived"></div>
+      </div>
+      <div style="display:flex;align-items:flex-end;padding-bottom:18px">
+        <span style="font-size:13px;color:var(--text-3)">auto-balances with K1</span>
+      </div>
+    </div>
+
+    <div class="section-label">Old vs. new stock breakdown</div>
+
+    <div class="toggle-group" id="ulModeToggle">
+      <button class="active" onclick="setMode('ul','pct')">% split</button>
+      <button onclick="setMode('ul','L')">Enter in L</button>
+    </div>
+
+    <!-- UL % mode -->
+    <div id="ulPctMode">
+      <div class="row-3">
+        <div class="field">
+          <label>% old stock</label>
+          <input type="number" id="ulOldPct" value="0" min="0" max="100" step="0.0001" oninput="onUlOldPctChange()">
+          <div class="derived" id="ulOldLDerived"></div>
+        </div>
+        <div class="field">
+          <label>% new stock</label>
+          <input type="number" id="ulNewPct" value="100" min="0" max="100" step="0.0001" oninput="onUlNewPctChange()">
+          <div class="derived" id="ulNewLDerived"></div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+
+    <!-- UL L mode -->
+    <div id="ulLMode" style="display:none">
+      <div class="row-3">
+        <div class="field">
+          <label>Old stock (L)</label>
+          <input type="number" id="ulOldL" value="0" min="0" step="0.01" oninput="onUlOldLChange()">
+          <div class="derived" id="ulOldPctDerived"></div>
+        </div>
+        <div class="field">
+          <label>New stock (L)</label>
+          <input type="number" id="ulNewL" value="9000" min="0" step="0.01" oninput="onUlNewLChange()">
+          <div class="derived" id="ulNewPctDerived"></div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Old stock price (Php/L)</label>
+        <input type="number" id="ulOldPrice" placeholder="e.g. 58.50" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label>New stock price (Php/L)</label>
+        <input type="number" id="ulNewPrice" placeholder="e.g. 60.00" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="warn" id="ulWarn">Old + new must equal total Unleaded volume</div>
+  </div>
+
+  <!-- K1 -->
+  <div class="card">
+    <div class="card-title">K1 additive</div>
+    <div class="row">
+      <div class="field">
+        <label>% K1 in batch</label>
+        <input type="number" id="k1Pct" value="10" min="0" max="100" step="0.0001" oninput="onK1PctChange()">
+        <div class="derived" id="k1VolDerived"></div>
+      </div>
+      <div style="display:flex;align-items:flex-end;padding-bottom:18px">
+        <span style="font-size:13px;color:var(--text-3)">auto-balances with Unleaded</span>
+      </div>
+    </div>
+
+    <div class="section-label">Old vs. new stock breakdown</div>
+
+    <div class="toggle-group" id="k1ModeToggle">
+      <button class="active" onclick="setMode('k1','pct')">% split</button>
+      <button onclick="setMode('k1','L')">Enter in L</button>
+    </div>
+
+    <!-- K1 % mode -->
+    <div id="k1PctMode">
+      <div class="row-3">
+        <div class="field">
+          <label>% old stock</label>
+          <input type="number" id="k1OldPct" value="0" min="0" max="100" step="0.0001" oninput="onK1OldPctChange()">
+          <div class="derived" id="k1OldLDerived"></div>
+        </div>
+        <div class="field">
+          <label>% new stock</label>
+          <input type="number" id="k1NewPct" value="100" min="0" max="100" step="0.0001" oninput="onK1NewPctChange()">
+          <div class="derived" id="k1NewLDerived"></div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+
+    <!-- K1 L mode -->
+    <div id="k1LMode" style="display:none">
+      <div class="row-3">
+        <div class="field">
+          <label>Old stock (L)</label>
+          <input type="number" id="k1OldL" value="0" min="0" step="0.01" oninput="onK1OldLChange()">
+          <div class="derived" id="k1OldPctDerived"></div>
+        </div>
+        <div class="field">
+          <label>New stock (L)</label>
+          <input type="number" id="k1NewL" value="1000" min="0" step="0.01" oninput="onK1NewLChange()">
+          <div class="derived" id="k1NewPctDerived"></div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Old stock price (Php/L)</label>
+        <input type="number" id="k1OldPrice" placeholder="e.g. 120.00" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label>New stock price (Php/L)</label>
+        <input type="number" id="k1NewPrice" placeholder="e.g. 130.00" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="warn" id="k1Warn">Old + new must equal total K1 volume</div>
+  </div>
+
+  <div class="global-warn" id="totalWarn">Unleaded % + K1 % must equal 100%</div>
+  <button class="calc-btn" onclick="calculate()">Calculate batch cost</button>
+
+  <!-- Results -->
+  <div class="result-section" id="results">
+    <div class="metrics">
+      <div class="metric">
+        <div class="mlabel">Total batch cost</div>
+        <div class="mval" id="rTotalCost">—</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Cost per liter</div>
+        <div class="mval" id="rPerLiter">—</div>
+      </div>
+    </div>
+    <div class="narrative" id="rNarrative"></div>
+  </div>
+
+  <footer>Fuel Mixture Cost Calculator &mdash; works offline, no data is sent anywhere.</footer>
+
+</div>
+
+<script>
+  var ulMode = 'pct', k1Mode = 'pct';
+
+  function fmt(n, d)  { return Number(n).toLocaleString('en-PH', { minimumFractionDigits: d ?? 2, maximumFractionDigits: d ?? 2 }); }
+  function fmtV(n)    { return Number(n).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+  function fmtP(n)    { return Number(n).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 4 }); }
+  function g(id)      { return parseFloat(document.getElementById(id).value) || 0; }
+  function sv(id, v)  { document.getElementById(id).value = parseFloat(v.toFixed(4)); }
+  function sd(id, t)  { document.getElementById(id).textContent = t; }
+
+  function setMode(which, mode) {
+    if (which === 'ul') {
+      ulMode = mode;
+      document.getElementById('ulPctMode').style.display = mode === 'pct' ? 'block' : 'none';
+      document.getElementById('ulLMode').style.display   = mode === 'L'   ? 'block' : 'none';
+      var btns = document.getElementById('ulModeToggle').querySelectorAll('button');
+      btns[0].className = mode === 'pct' ? 'active' : '';
+      btns[1].className = mode === 'L'   ? 'active' : '';
+      if (mode === 'L') syncUlPctToL();
+    } else {
+      k1Mode = mode;
+      document.getElementById('k1PctMode').style.display = mode === 'pct' ? 'block' : 'none';
+      document.getElementById('k1LMode').style.display   = mode === 'L'   ? 'block' : 'none';
+      var btns = document.getElementById('k1ModeToggle').querySelectorAll('button');
+      btns[0].className = mode === 'pct' ? 'active' : '';
+      btns[1].className = mode === 'L'   ? 'active' : '';
+      if (mode === 'L') syncK1PctToL();
+    }
+    updateDerived();
+  }
+
+  function syncUlPctToL() {
+    var ulVol = g('totalVol') * (g('ulPct') / 100);
+    document.getElementById('ulOldL').value = parseFloat((ulVol * (g('ulOldPct') / 100)).toFixed(2));
+    document.getElementById('ulNewL').value = parseFloat((ulVol * (g('ulNewPct') / 100)).toFixed(2));
+  }
+
+  function syncK1PctToL() {
+    var k1Vol = g('totalVol') * (g('k1Pct') / 100);
+    document.getElementById('k1OldL').value = parseFloat((k1Vol * (g('k1OldPct') / 100)).toFixed(2));
+    document.getElementById('k1NewL').value = parseFloat((k1Vol * (g('k1NewPct') / 100)).toFixed(2));
+  }
+
+  function onTotalVolChange() {
+    if (ulMode === 'L') syncUlPctToL();
+    if (k1Mode === 'L') syncK1PctToL();
+    updateDerived();
+  }
+
+  function onUlPctChange()    { sv('k1Pct', Math.max(0, Math.min(100, 100 - g('ulPct')))); if (ulMode==='L') syncUlPctToL(); if (k1Mode==='L') syncK1PctToL(); updateDerived(); }
+  function onK1PctChange()    { sv('ulPct', Math.max(0, Math.min(100, 100 - g('k1Pct')))); if (ulMode==='L') syncUlPctToL(); if (k1Mode==='L') syncK1PctToL(); updateDerived(); }
+  function onUlOldPctChange() { sv('ulNewPct', Math.max(0, Math.min(100, 100 - g('ulOldPct')))); updateDerived(); }
+  function onUlNewPctChange() { sv('ulOldPct', Math.max(0, Math.min(100, 100 - g('ulNewPct')))); updateDerived(); }
+  function onK1OldPctChange() { sv('k1NewPct', Math.max(0, Math.min(100, 100 - g('k1OldPct')))); updateDerived(); }
+  function onK1NewPctChange() { sv('k1OldPct', Math.max(0, Math.min(100, 100 - g('k1NewPct')))); updateDerived(); }
+
+  function onUlOldLChange() {
+    var ulVol = g('totalVol') * (g('ulPct') / 100);
+    document.getElementById('ulNewL').value = parseFloat(Math.max(0, ulVol - Math.min(g('ulOldL'), ulVol)).toFixed(2));
+    updateDerived();
+  }
+  function onUlNewLChange() {
+    var ulVol = g('totalVol') * (g('ulPct') / 100);
+    document.getElementById('ulOldL').value = parseFloat(Math.max(0, ulVol - Math.min(g('ulNewL'), ulVol)).toFixed(2));
+    updateDerived();
+  }
+  function onK1OldLChange() {
+    var k1Vol = g('totalVol') * (g('k1Pct') / 100);
+    document.getElementById('k1NewL').value = parseFloat(Math.max(0, k1Vol - Math.min(g('k1OldL'), k1Vol)).toFixed(2));
+    updateDerived();
+  }
+  function onK1NewLChange() {
+    var k1Vol = g('totalVol') * (g('k1Pct') / 100);
+    document.getElementById('k1OldL').value = parseFloat(Math.max(0, k1Vol - Math.min(g('k1NewL'), k1Vol)).toFixed(2));
+    updateDerived();
+  }
+
+  function getUlOldL() { return ulMode === 'L' ? g('ulOldL') : g('totalVol') * (g('ulPct') / 100) * (g('ulOldPct') / 100); }
+  function getUlNewL() { return ulMode === 'L' ? g('ulNewL') : g('totalVol') * (g('ulPct') / 100) * (g('ulNewPct') / 100); }
+  function getK1OldL() { return k1Mode === 'L' ? g('k1OldL') : g('totalVol') * (g('k1Pct') / 100) * (g('k1OldPct') / 100); }
+  function getK1NewL() { return k1Mode === 'L' ? g('k1NewL') : g('totalVol') * (g('k1Pct') / 100) * (g('k1NewPct') / 100); }
+
+  function updateDerived() {
+    var tot = g('totalVol'), ulPct = g('ulPct'), k1Pct = g('k1Pct');
+    var ulVol = tot * (ulPct / 100), k1Vol = tot * (k1Pct / 100);
+
+    sd('ulVolDerived', ulVol > 0 ? fmtV(ulVol) + ' L total Unleaded' : '');
+    sd('k1VolDerived', k1Vol > 0 ? fmtV(k1Vol) + ' L total K1' : '');
+
+    if (ulMode === 'pct') {
+      sd('ulOldLDerived', getUlOldL() > 0 || g('ulOldPct') >= 0 ? '= ' + fmtV(getUlOldL()) + ' L' : '');
+      sd('ulNewLDerived', getUlNewL() > 0 || g('ulNewPct') >= 0 ? '= ' + fmtV(getUlNewL()) + ' L' : '');
+    } else {
+      var uOP = ulVol > 0 ? (g('ulOldL') / ulVol) * 100 : 0;
+      var uNP = ulVol > 0 ? (g('ulNewL') / ulVol) * 100 : 0;
+      sd('ulOldPctDerived', fmtP(uOP) + '% of Unleaded');
+      sd('ulNewPctDerived', fmtP(uNP) + '% of Unleaded');
+    }
+
+    if (k1Mode === 'pct') {
+      sd('k1OldLDerived', getK1OldL() > 0 || g('k1OldPct') >= 0 ? '= ' + fmtV(getK1OldL()) + ' L' : '');
+      sd('k1NewLDerived', getK1NewL() > 0 || g('k1NewPct') >= 0 ? '= ' + fmtV(getK1NewL()) + ' L' : '');
+    } else {
+      var kOP = k1Vol > 0 ? (g('k1OldL') / k1Vol) * 100 : 0;
+      var kNP = k1Vol > 0 ? (g('k1NewL') / k1Vol) * 100 : 0;
+      sd('k1OldPctDerived', fmtP(kOP) + '% of K1');
+      sd('k1NewPctDerived', fmtP(kNP) + '% of K1');
+    }
+  }
+
+  function validate() {
+    var tot = g('totalVol'), ulPct = g('ulPct'), k1Pct = g('k1Pct');
+    var ulVol = tot * (ulPct / 100), k1Vol = tot * (k1Pct / 100);
+    var totalOk = Math.abs(ulPct + k1Pct - 100) < 0.01;
+    var ulOk = Math.abs(getUlOldL() + getUlNewL() - ulVol) < 0.1;
+    var k1Ok = Math.abs(getK1OldL() + getK1NewL() - k1Vol) < 0.1;
+    document.getElementById('ulWarn').style.display   = ulOk    ? 'none' : 'block';
+    document.getElementById('k1Warn').style.display   = k1Ok    ? 'none' : 'block';
+    document.getElementById('totalWarn').style.display = totalOk ? 'none' : 'block';
+    return ulOk && k1Ok && totalOk;
+  }
+
+  function calculate() {
+    if (!validate()) return;
+
+    var fuelType = document.getElementById('fuelType').value;
+    var tot      = g('totalVol');
+    var ulPct    = g('ulPct'), k1Pct = g('k1Pct');
+    var ulVol    = tot * (ulPct / 100), k1Vol = tot * (k1Pct / 100);
+    var ulOldL   = getUlOldL(), ulNewL = getUlNewL();
+    var k1OldL   = getK1OldL(), k1NewL = getK1NewL();
+    var ulOldP   = g('ulOldPrice'), ulNewP = g('ulNewPrice');
+    var k1OldP   = g('k1OldPrice'), k1NewP = g('k1NewPrice');
+
+    var ulOldCost  = ulOldL * ulOldP, ulNewCost = ulNewL * ulNewP;
+    var k1OldCost  = k1OldL * k1OldP, k1NewCost = k1NewL * k1NewP;
+    var totalCost  = ulOldCost + ulNewCost + k1OldCost + k1NewCost;
+    var perLiter   = totalCost / tot;
+
+    var ulOldPct = ulVol > 0 ? (ulOldL / ulVol) * 100 : 0;
+    var ulNewPct = ulVol > 0 ? (ulNewL / ulVol) * 100 : 0;
+    var k1OldPct = k1Vol > 0 ? (k1OldL / k1Vol) * 100 : 0;
+    var k1NewPct = k1Vol > 0 ? (k1NewL / k1Vol) * 100 : 0;
+
+    document.getElementById('rTotalCost').textContent = 'Php ' + fmt(totalCost);
+    document.getElementById('rPerLiter').textContent  = 'Php ' + fmt(perLiter) + '/L';
+
+    var ulPart = '';
+    if (ulOldL > 0) ulPart += `Of the Pure ${fuelType} Unleaded — <b>${fmtP(ulOldPct)}%</b>, or <b>${fmtV(ulOldL)} L</b>, is old stock @ <b>Php ${fmt(ulOldP)}/L</b>, costing <b>Php ${fmt(ulOldCost)}</b>. `;
+    if (ulNewL > 0) ulPart += `<b>${fmtP(ulNewPct)}%</b>, or <b>${fmtV(ulNewL)} L</b>, is new stock @ <b>Php ${fmt(ulNewP)}/L</b>, costing <b>Php ${fmt(ulNewCost)}</b>.`;
+
+    var k1Part = '';
+    if (k1OldL > 0) k1Part += `Of the K1 Additive — <b>${fmtP(k1OldPct)}%</b>, or <b>${fmtV(k1OldL)} L</b>, is old stock @ <b>Php ${fmt(k1OldP)}/L</b>, costing <b>Php ${fmt(k1OldCost)}</b>. `;
+    if (k1NewL > 0) k1Part += `<b>${fmtP(k1NewPct)}%</b>, or <b>${fmtV(k1NewL)} L</b>, is new stock @ <b>Php ${fmt(k1NewP)}/L</b>, costing <b>Php ${fmt(k1NewCost)}</b>.`;
+
+    document.getElementById('rNarrative').innerHTML =
+      `This batch of <b>${fuelType} Unleaded</b> is <b>${fmtV(tot / 1000)} kL (${fmtV(tot)} L)</b>. ` +
+      `<b>${fmtP(ulPct)}%</b> is Pure ${fuelType} Unleaded, and <b>${fmtP(k1Pct)}%</b> is K1 Additive.<br><br>` +
+      ulPart + `<br><br>` + k1Part + `<br><br>` +
+      `The final cost of this batch is <b>Php ${fmt(totalCost)}</b>, or <b>Php ${fmt(perLiter)}/L</b>.`;
+
+    document.getElementById('results').style.display = 'block';
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  updateDerived();
+</script>
+</body>
+</html>
